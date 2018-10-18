@@ -2,7 +2,6 @@ package com.xperfect.cn.helper.photo.lib.gestures;
 
 import android.annotation.TargetApi;
 import android.os.Build;
-import android.util.Log;
 import android.view.MotionEvent;
 
 public class MultiPointerGestureDetector {
@@ -20,7 +19,7 @@ public class MultiPointerGestureDetector {
     void click(int count, MultiPointerGestureDetector detector);
   }
 
-  private static final int MAX_POINTERS = 3;
+  private static final int MAX_POINTERS = 10;
 
   private boolean mGestureInProgress;
   private int mCount;
@@ -50,7 +49,6 @@ public class MultiPointerGestureDetector {
 
   @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
   public void reset() {
-    mCount = 0;
     mGestureInProgress = false;
     for (int i = 0; i < MAX_POINTERS; i++) {
       mPointerId[i] = Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH ?
@@ -97,69 +95,52 @@ public class MultiPointerGestureDetector {
     int pointerCount = event.getPointerCount();
     switch (event.getActionMasked()) {
       case MotionEvent.ACTION_POINTER_DOWN:
-      case MotionEvent.ACTION_DOWN: {
-        if (pointerCount == 1) {
-          reset();
-          startGesture();
-        }
+        mCount = pointerCount < mCount ? mCount
+            : (pointerCount > MAX_POINTERS ? MAX_POINTERS : pointerCount);
         for (int position = 0; position < MAX_POINTERS; position++) {
           int pointerIndex = getPressedPointerIndex(event, position);
           if (pointerIndex == -1) {
-            mCurrentX[position] = mStartX[position] = 0;
-            mCurrentY[position] = mStartY[position] = 0;
-            mStartTime[position] = 0;
+            mCurrentX[position] = mStartX[position] = pointerCount == 1 ? event.getX() : 0;
+            mCurrentY[position] = mStartY[position] = pointerCount == 1 ? event.getY() : 0;
+            mStartTime[position] = pointerCount == 1 ? System.currentTimeMillis() : 0;
             continue;
           }
           mStartTime[position] = System.currentTimeMillis();
           mPointerId[position] = event.getPointerId(pointerIndex);
           mCurrentX[position] = mStartX[position] = event.getX(pointerIndex);
           mCurrentY[position] = mStartY[position] = event.getY(pointerIndex);
-          mCount++;
         }
+        if (mGestureInProgress && mCount > 0) {
+          startGesture();
+        } else {
+        }
+        break;
+      case MotionEvent.ACTION_DOWN: {
+        stopGesture();
+        reset();
+        mCurrentX[0] = mStartX[0] = event.getX();
+        mCurrentY[0] = mStartY[0] = event.getY();
+        mStartTime[0] = System.currentTimeMillis();
+        mCount = pointerCount;
         break;
       }
       case MotionEvent.ACTION_POINTER_UP:
-      case MotionEvent.ACTION_UP: {
-        boolean wasGestureInProgress = mGestureInProgress;
-        // update pointers
         boolean isAllDouble = false;
         for (int position = 0; position < MAX_POINTERS; position++) {
           int index = getPressedPointerIndex(event, position);
           if (index == -1) {
-            if (pointerCount == 1) {
-              mCurrentTime[position] = System.currentTimeMillis();
-              mCurrentX[position] = event.getX();
-              mCurrentY[position] = event.getY();
-              long deltaStartTime = mStartTime[position] - mStartTimeTemple[position];
-              long deltaCurrentTime = mCurrentTime[position] - mCurrentTimeTemple[position];
-              if (deltaStartTime < 500 && deltaCurrentTime < 500 && mCount == 1) {
-                Log.e(TAG,
-                    "click  single position   " + position + "  deltaStartTime " + deltaStartTime
-                        + "  deltaCurrentTime  " + deltaCurrentTime);
-                isAllDouble = true;
-              } else {
-                isAllDouble = false;
-              }
-              mStartTimeTemple[position] = mStartTime[position];
-              mCurrentTimeTemple[position] = mCurrentTime[position];
-              break;
-            } else {
-              mCurrentTime[position] = 0;
-              mCurrentX[position] = 0;
-              mCurrentY[position] = 0;
-            }
+            mCurrentTime[position] = 0;
+            mCurrentX[position] = 0;
+            mCurrentY[position] = 0;
             continue;
           }
           mCurrentTime[position] = System.currentTimeMillis();
           mPointerId[position] = event.getPointerId(index);
           mCurrentX[position] = event.getX(index);
           mCurrentY[position] = event.getY(index);
-          long deltaStartTime = mStartTimeTemple[position] - mStartTime[position];
-          long deltaCurrentTime = mCurrentTimeTemple[position] - mCurrentTime[position];
+          long deltaStartTime = mStartTime[position] - mStartTimeTemple[position];
+          long deltaCurrentTime = mCurrentTime[position] - mCurrentTimeTemple[position];
           if (deltaStartTime < 500 && deltaCurrentTime < 500) {
-            Log.e(TAG,
-                "click  multiple position   " + position + "  deltaStartTime " + deltaStartTime
-                    + "  deltaCurrentTime  " + deltaCurrentTime);
             isAllDouble = true;
           } else {
             isAllDouble = false;
@@ -167,17 +148,36 @@ public class MultiPointerGestureDetector {
           mStartTimeTemple[position] = mStartTime[position];
           mCurrentTimeTemple[position] = mCurrentTime[position];
         }
-        if (isAllDouble && mListener != null) {
-          Log.e(TAG, "isAllDouble " + isAllDouble + " mGestureInProgress  " + mGestureInProgress
-              + "  mListener != null " + (mListener != null));
+        if (isAllDouble && mCount == pointerCount && mListener != null) {
           mListener.click(event.getPointerCount(), this);
         }
-        if (wasGestureInProgress && mCount > 0) {
+        if (mGestureInProgress && mCount > 0) {
           startGesture();
         } else {
-          stopGesture();
-          reset();
         }
+        break;
+      case MotionEvent.ACTION_UP: {
+        stopGesture();
+        reset();
+        // update pointers
+        boolean isDouble = false;
+        mCurrentTime[0] = System.currentTimeMillis();
+        mCurrentX[0] = event.getX();
+        mCurrentY[0] = event.getY();
+        long deltaStartTime = mStartTime[0] - mStartTimeTemple[0];
+        long deltaCurrentTime = mCurrentTime[0] - mCurrentTimeTemple[0];
+        if (deltaStartTime < 500 && deltaCurrentTime < 500 && pointerCount == 1) {
+          isDouble = true;
+        } else {
+          isDouble = false;
+        }
+        if (isDouble && mCount == 1 && mListener != null) {
+          mListener.click(event.getPointerCount(), this);
+        }
+        mStartTimeTemple[0] = mStartTime[0];
+        mCurrentTimeTemple[0] = mCurrentTime[0];
+        //
+        mCount = 0;
         break;
       }
       case MotionEvent.ACTION_MOVE: {
@@ -200,7 +200,6 @@ public class MultiPointerGestureDetector {
         break;
       }
       case MotionEvent.ACTION_CANCEL: {
-        Log.e(TAG, "ACTION_CANCEL");
         stopGesture();
         reset();
         break;

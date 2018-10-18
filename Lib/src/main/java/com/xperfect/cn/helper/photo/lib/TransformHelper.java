@@ -21,7 +21,7 @@ public interface TransformHelper {
 
   Matrix getTransform();
 
-  void setTransformBounds(RectF transformBounds);
+  void setObjectBounds(RectF objectBounds);
 
   void setViewBounds(RectF viewBounds);
 
