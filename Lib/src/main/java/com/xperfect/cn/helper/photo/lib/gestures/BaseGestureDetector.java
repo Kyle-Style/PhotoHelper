@@ -2,12 +2,25 @@ package com.xperfect.cn.helper.photo.lib.gestures;
 
 public class BaseGestureDetector {
 
-
-  protected float calcAverage(float[] arr, int len) {
+  protected float calcAverage(float[] arr) {
     float sum = 0;
-    for (int i = 0; i < len; i++) {
-      sum += arr[i];
+    int count = 0;
+    for (int i = 0; i < arr.length; i++) {
+      if (arr[i] > 0) {
+        count++;
+        sum += arr[i];
+      }
     }
-    return (len > 0) ? sum / len : 0;
+    return (count > 0) ? sum / count : 0;
+  }
+
+  protected float effectiveLength(float[] arr) {
+    int count = 0;
+    for (int i = 0; i < arr.length; i++) {
+      if (arr[i] > 0) {
+        count++;
+      }
+    }
+    return count;
   }
 }

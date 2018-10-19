@@ -45,24 +45,24 @@ public class DefaultGestureDetector extends BaseGestureDetector implements Gestu
 
   @Override
   public float getPivotX() {
-    return calcAverage(detector.getStartX(), detector.getCount());
+    return calcAverage(detector.getStartX());
   }
 
   @Override
   public float getPivotY() {
-    return calcAverage(detector.getStartY(), detector.getCount());
+    return calcAverage(detector.getStartY());
   }
 
   @Override
   public float getTranslationX() {
-    return calcAverage(detector.getCurrentX(), detector.getCount()) -
-        calcAverage(detector.getStartX(), detector.getCount());
+    return calcAverage(detector.getCurrentX()) -
+        calcAverage(detector.getStartX());
   }
 
   @Override
   public float getTranslationY() {
-    return calcAverage(detector.getCurrentY(), detector.getCount()) -
-        calcAverage(detector.getStartY(), detector.getCount());
+    return calcAverage(detector.getCurrentY()) -
+        calcAverage(detector.getStartY());
   }
 
   @Override
@@ -70,13 +70,19 @@ public class DefaultGestureDetector extends BaseGestureDetector implements Gestu
     if (detector.getCount() < 2) {
       return 1;
     } else {
-      float startDeltaX = detector.getStartX()[1] - detector.getStartX()[0];
-      float startDeltaY = detector.getStartY()[1] - detector.getStartY()[0];
-      float currentDeltaX = detector.getCurrentX()[1] - detector.getCurrentX()[0];
-      float currentDeltaY = detector.getCurrentY()[1] - detector.getCurrentY()[0];
-      float startDist = (float) Math.hypot(startDeltaX, startDeltaY);
-      float currentDist = (float) Math.hypot(currentDeltaX, currentDeltaY);
-      return currentDist / startDist;
+      if (effectiveLength(detector.getStartX()) > 1) {
+        float startDeltaX = calcAverage(detector.getStartX()) - detector.getStartX()[0];
+        float startDeltaY = calcAverage(detector.getStartY()) - detector.getStartY()[0];
+        float currentDeltaX =
+            calcAverage(detector.getCurrentX()) - detector.getCurrentX()[0];
+        float currentDeltaY =
+            calcAverage(detector.getCurrentY()) - detector.getCurrentY()[0];
+        float startDist = (float) Math.hypot(startDeltaX, startDeltaY);
+        float currentDist = (float) Math.hypot(currentDeltaX, currentDeltaY);
+        return currentDist / startDist;
+      } else {
+        return 1;
+      }
     }
   }
 
@@ -85,17 +91,22 @@ public class DefaultGestureDetector extends BaseGestureDetector implements Gestu
     if (detector.getCount() < 2) {
       return 0;
     } else {
-      float startDeltaX = detector.getStartX()[1] - detector.getStartX()[0];
-      float startDeltaY = detector.getStartY()[1] - detector.getStartY()[0];
-      float currentDeltaX = detector.getCurrentX()[1] - detector.getCurrentX()[0];
-      float currentDeltaY = detector.getCurrentY()[1] - detector.getCurrentY()[0];
-      float startAngle = (float) Math.atan2(startDeltaY, startDeltaX);
-      float currentAngle = (float) Math.atan2(currentDeltaY, currentDeltaX);
-      return currentAngle - startAngle;
+      if (effectiveLength(detector.getStartX()) > 1) {
+        float startDeltaX = calcAverage(detector.getStartX()) - detector.getStartX()[0];
+        float startDeltaY = calcAverage(detector.getStartY()) - detector.getStartY()[0];
+        float currentDeltaX =
+            calcAverage(detector.getCurrentX()) - detector.getCurrentX()[0];
+        float currentDeltaY =
+            calcAverage(detector.getCurrentY()) - detector.getCurrentY()[0];
+        float startAngle = (float) Math.atan2(startDeltaY, startDeltaX);
+        float currentAngle = (float) Math.atan2(currentDeltaY, currentDeltaX);
+        return currentAngle - startAngle;
+      } else {
+        return 0;
+      }
     }
   }
 
-  //时间反馈
   @Override
   public void onGestureBegin(MultiPointerGestureDetector detector) {
     if (gestureListener != null) {

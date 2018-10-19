@@ -3,7 +3,6 @@ package com.xperfect.cn.helper.photo.lib;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.RectF;
-import android.util.Log;
 import android.view.MotionEvent;
 import com.xperfect.cn.helper.photo.lib.gestures.DefaultGestureDetector;
 
@@ -144,19 +143,18 @@ public class DefaultTransformHelper implements TransformHelper,
 
   @Override
   public void click(int count, DefaultGestureDetector detector) {
-    Log.e(TAG,
-        "click count " + count + " TranslationX  " + detector.getTranslationX() + " TranslationY  "
-            + detector.getTranslationY());
     if (isScaleEnabled) {
       float scale = detector.getScale();
       switch (count) {
         case 1:
           scale += 1;
+          break;
         case 2:
-          scale -= 1;
+          scale *= 0.5;
+          break;
         case 3:
-          scale = 1;
         default:
+          scale = 1;
       }
       this.activeTransformMatrix
           .postScale(scale, scale, detector.getPivotX(), detector.getPivotY());
